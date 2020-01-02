@@ -12,28 +12,20 @@ userAccess = [{"Username": "Test User", "Card_ID":657244891756, "Card_Key": "pim
 reader = SimpleMFRC522()
 GPIO.output(7, False)
 
+try:
 
-while True:
-    validUser = None
-    try:
-        id, key = reader.read()
+    while True:
+        try:
+            id, key = reader.read()
+            
 
-        for user in userAccess:
-            if id == user["Card_ID"] and key.strip() == user["Card_Key"]:
-                validUser = user
-                break
+                print(f"I don't know you!: {id}, {key}")
+        except:
+            break
         
-        if validUser:
-            print(f"Hello {validUser['Username']}!")
-            GPIO.output(7, True)
-            sleep(2)
-            GPIO.output(7, False)
-        else:            
-            print(f"I don't know you!: {id}, {key}")
-    except:
-        break
-    
-    if input("Press any key to try again. Press Q to quit").upper() == "Q":
-        break
-
-GPIO.cleanup()
+        # if input("Press any key to try again. Press Q to quit").upper() == "Q":
+        #     break
+except:
+    pass
+finally:
+    GPIO.cleanup()
