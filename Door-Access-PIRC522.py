@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from mfrc522 import SimpleMFRC522
+from pirc522 import RFID
 from time import sleep
 from datetime import datetime
 import MySQLdb
@@ -25,7 +25,7 @@ dbExpireTime = 60  # minutes
 dbRefreshInterval = 10 # minutes
 
 
-reader = SimpleMFRC522(delay=0.4)
+rdr = RFID()
 
 
 class user_info:  # pylint: disable=too-few-public-methods
@@ -92,7 +92,15 @@ class _cachedDB:  # pylint: disable=too-few-public-methods
             sleep(dbRefreshInterval * 60)
 
 
-def ReaderAccess():
+def rdrAccess():
+    # @cached(cache=TTLCache(maxsize=1024, ttl=3600))
+    # def CheckAccess():
+    #     dbConnection = MySQLdb.connect(host=dbHost, user=dbUser, passwd=dbPass, db=dbName)
+    #     cur = dbConnection.cursor(MySQLdb.cursors.DictCursor)
+    #     cur.execute(f"SELECT * FROM access_list")
+    #     dbConnection.close()
+    #     return cur.fetchall()
+
     cachedDB = _cachedDB()
 
     def log_access(u: Type[user_info]):
@@ -108,25 +116,37 @@ def ReaderAccess():
 
     while True:
         print("Waiting for key card...")
-        card_id, card_key = reader.read()
-        card_key = card_key.strip()
-        u = user_info(cachedDB, card_key, card_id)
+        rdr.wait_for_tag()
+        (error, data) = rdr.request()
+        if not error:
+            (error, uid) = rdr.anticoll()
+            if not error:
+                print("UID: " + str(uid))
+                # Select Tag is required before Auth
+                if not rdr.select_tag(uid):
+                    # Auth for block 10 (block 2 of sector 2) using default shipping key A
+                    if not rdr.card_auth(rdr.auth_a, 10, [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], uid):
+                        # This will print something like (False, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                        print("Reading block 10: " + str(rdr.read(10)))
+                        # Always stop crypto1 when done working
+                        rdr.stop_crypto()
+            u = user_info(cachedDB, card_key, card_id)
 
-        if u.has_access:
-            print(f"\tACCESS GRANTED for {u.name}")
-            door.open()
-        else:
-            print("\tACCESS DENIED")
-            sleep(RELAY_TIMEOUT)
+            if u.has_access:
+                print(f"\tACCESS GRANTED for {u.name}")
+                door.open()
+            else:
+                print("\tACCESS DENIED")
+                sleep(RELAY_TIMEOUT)
 
-        threading.Thread(target=log_access, args=[u]).start()
+            threading.Thread(target=log_access, args=[u]).start()
 
-        # dbConnection.commit()
+            # dbConnection.commit()
 
 
 if __name__ == "__main__":
     try:
-        ReaderAccess()
+        rdrAccess()
     except KeyboardInterrupt:
         print("Stopped because of Keyboard Inturrupt")
     except Exception as e:

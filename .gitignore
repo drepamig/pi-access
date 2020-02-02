@@ -1,2 +1,13 @@
 .vscode/launch.json
 lock.py
+pi-rc522/pi-rc522-master/pirc522/util.py
+.gitignore
+pi-rc522/pi-rc522-master/pirc522/__init__.py
+pi-rc522/pi-rc522-master/pirc522/rfid.py
+pi-rc522/pi-rc522-master/examples/UtilExample.py
+pi-rc522/pi-rc522-master/examples/Read.py
+pi-rc522/pi-rc522-master/examples/KeyChange.py
+pi-rc522/pi-rc522-master/setup.py
+pi-rc522/pi-rc522-master/README.md
+pi-rc522/pi-rc522-master/*
+master.zip
